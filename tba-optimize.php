@@ -9,7 +9,7 @@
  * License: GPLv2 or later
  * Text Domain: tba-optimize-wp
  * 
- * GitHub Plugin URI: https://github.com/your-github-username/tba-optimize-wp
+ * GitHub Plugin URI: https://github.com/tbba/tba-optimize-wp
  * GitHub Branch: main
  */
 
