@@ -4,8 +4,8 @@
  * Plugin URI: https://github.com/your-github-username/tba-optimize-wp
  * Description: A plugin to optimize WordPress for speed and GDPR compliance by removing unnecessary elements.
  * Version: 1.0
- * Author: TBA-Berlin.de
- * Author URI: https://tba-berlin.de
+ * Author: Carl Erling
+ * Author URI: https://www.tba-berlin.de
  * License: GPLv2 or later
  * Text Domain: tba-optimize-wp
  * 
