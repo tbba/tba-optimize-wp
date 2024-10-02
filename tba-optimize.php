@@ -8,7 +8,11 @@
  * Author URI: https://www.tba-berlin.de
  * License: GPLv2 or later
  * Text Domain: tba-optimize-wp
+ *
+ * GitHub Plugin URI: https://github.com/tbba/tba-optimize-wp
+ * GitHub Release Asset: true
  */
+
 
 if (!defined('ABSPATH')) {
     exit; // Exit if accessed directly.
