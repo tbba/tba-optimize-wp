@@ -8,114 +8,116 @@
  * Author URI: https://www.tba-berlin.de
  * License: GPLv2 or later
  * Text Domain: tba-optimize-wp
- * 
- * GitHub Plugin URI: https://github.com/tbba/tba-optimize-wp
- * GitHub Branch: main
  */
 
 if (!defined('ABSPATH')) {
     exit; // Exit if accessed directly.
 }
 
-function optimize_wp_for_speed_and_gdpr() {
+// Direct GitHub Updater Integration
 
-    // ---- Task 1: Disable Emojis ----
-    remove_action('wp_head', 'print_emoji_detection_script', 7);
-    remove_action('wp_print_styles', 'print_emoji_styles');
-    remove_action('admin_print_scripts', 'print_emoji_detection_script');
-    remove_action('admin_print_styles', 'print_emoji_styles');
+class TBA_Optimize_Updater {
+    private $file;
+    private $plugin;
+    private $basename;
+    private $active;
+    private $username = 'tbba'; // GitHub username
+    private $repository = 'tba-optimize-wp'; // GitHub repository name
+    private $github_api_result;
+    private $plugin_data;
+    private $version;
 
-    // ---- Task 2: Remove Embeds (oEmbed Discovery Links and Related) ----
-    remove_action('wp_head', 'wp_oembed_add_discovery_links');  // Remove oEmbed discovery links
-    remove_action('wp_head', 'wp_oembed_add_host_js');  // Remove oEmbed host JS
-    add_filter('embed_oembed_discover', '__return_false');  // Disable oEmbed discovery completely
-
-    // ---- Task 3: Disable REST API Discovery Links and Headers ----
-    remove_action('wp_head', 'rest_output_link_wp_head', 10);  // Remove REST API link from head
-    remove_action('template_redirect', 'rest_output_link_header', 11, 0);  // Remove REST API link from HTTP headers
-
-    // ---- Task 4: Remove Other Unnecessary Links in the Header ----
-    remove_action('wp_head', 'wp_generator');  // Remove WordPress version number
-    remove_action('wp_head', 'rsd_link');  // Disable RSD link (Really Simple Discovery)
-    remove_action('wp_head', 'wlwmanifest_link');  // Disable WLW manifest link (Windows Live Writer)
-    remove_action('wp_head', 'wp_shortlink_wp_head');  // Disable shortlink for posts
-
-    // ---- Task 5: Disable Gravatar and Comment Cookies ----
-    add_filter('get_avatar', '__return_false');  // Disable Gravatar to prevent external requests
-    update_option('show_avatars', 0);  // Ensure avatars are turned off in settings
-    add_filter('comment_form_defaults', 'disable_comment_cookies');
-    function disable_comment_cookies($defaults) {
-        $defaults['cookies'] = '';  // Disable comment cookies for GDPR compliance
-        return $defaults;
+    public function __construct($file) {
+        $this->file = $file;
+        add_action('admin_init', array($this, 'set_plugin_properties'));
+        add_filter('pre_set_site_transient_update_plugins', array($this, 'modify_transient'), 10, 1);
+        add_filter('plugins_api', array($this, 'plugin_popup'), 10, 3);
+        add_filter('upgrader_post_install', array($this, 'after_install'), 10, 3);
     }
 
-    // ---- Task 6: Remove Comment URL Field ----
-    add_filter('comment_form_default_fields', 'remove_comment_url_field');
-    function remove_comment_url_field($fields) {
-        if (isset($fields['url'])) {
-            unset($fields['url']);  // Remove URL field from comment form to reduce spam
+    public function set_plugin_properties() {
+        $this->plugin     = get_plugin_data($this->file);
+        $this->basename   = plugin_basename($this->file);
+        $this->active     = is_plugin_active($this->basename);
+        $this->version    = $this->plugin['Version'];
+    }
+
+    private function get_repository_info() {
+        if (is_null($this->github_api_result)) {
+            $url = "https://api.github.com/repos/{$this->username}/{$this->repository}/releases";
+            $this->github_api_result = wp_remote_retrieve_body(wp_remote_get($url));
+
+            if (!empty($this->github_api_result)) {
+                $this->github_api_result = @json_decode($this->github_api_result);
+            }
+
+            if (is_array($this->github_api_result)) {
+                $this->github_api_result = $this->github_api_result[0]; // Get latest release
+            }
         }
-        return $fields;
     }
 
-    // ---- Task 7: Disable RSS Feeds ----
-    function disable_rss_feeds() {
-        wp_die(__('No feed available, please visit the <a href="'. get_bloginfo('url') .'">homepage</a>!'));  // Disable RSS feeds
+    public function modify_transient($transient) {
+        if (!is_object($transient)) {
+            $transient = new stdClass();
+        }
+
+        $this->get_repository_info();
+
+        if ($this->github_api_result && version_compare($this->version, $this->github_api_result->tag_name, '<')) {
+            $package = $this->github_api_result->zipball_url;
+
+            $obj = new stdClass();
+            $obj->slug = $this->basename;
+            $obj->new_version = $this->github_api_result->tag_name;
+            $obj->url = $this->plugin['PluginURI'];
+            $obj->package = $package;
+
+            $transient->response[$this->basename] = $obj;
+        }
+
+        return $transient;
     }
-    add_action('do_feed', 'disable_rss_feeds', 1);
-    add_action('do_feed_rdf', 'disable_rss_feeds', 1);
-    add_action('do_feed_rss', 'disable_rss_feeds', 1);
-    add_action('do_feed_rss2', 'disable_rss_feeds', 1);
-    add_action('do_feed_atom', 'disable_rss_feeds', 1);
 
-    // ---- Task 8: Remove gmpg.org Profile Link ----
-    add_filter('avf_profile_head_tag', 'avia_remove_profile');
-    function avia_remove_profile() {
-        return false;  // Remove gmpg.org profile link for privacy
+    public function plugin_popup($result, $action, $args) {
+        if (!empty($args->slug) && $args->slug === $this->basename) {
+            $this->get_repository_info();
+            $result = new stdClass();
+            $result->name = $this->plugin['Name'];
+            $result->slug = $this->basename;
+            $result->version = $this->github_api_result->tag_name;
+            $result->author = $this->plugin['AuthorName'];
+            $result->homepage = $this->plugin['PluginURI'];
+            $result->requires = '5.0';
+            $result->tested = '5.8';
+            $result->download_link = $this->github_api_result->zipball_url;
+            $result->sections = array(
+                'description' => $this->plugin['Description'],
+                'changelog' => $this->github_api_result->body
+            );
+
+            return $result;
+        }
+
+        return false;
     }
 
-    // ---- Task 9: Disable Dashicons for Non-Logged-In Users Only ----
-    if (!is_user_logged_in()) {
-        wp_deregister_style('dashicons');  // Prevent loading Dashicons for non-logged-in users only
+    public function after_install($response, $hook_extra, $result) {
+        global $wp_filesystem;
+
+        $install_directory = plugin_dir_path($this->file);
+        $wp_filesystem->move($result['destination'], $install_directory);
+        $result['destination'] = $install_directory;
+
+        if ($this->active) {
+            activate_plugin($this->basename);
+        }
+
+        return $result;
     }
 }
-add_action('init', 'optimize_wp_for_speed_and_gdpr');
 
-
-// Remove jQuery Migrate
-function remove_jquery_migrate($scripts) {
-    if (!is_admin() && isset($scripts->registered['jquery'])) {
-        $jquery_dependencies = $scripts->registered['jquery']->deps;
-        $scripts->registered['jquery']->deps = array_diff($jquery_dependencies, array('jquery-migrate'));
-    }
-}
-add_action('wp_default_scripts', 'remove_jquery_migrate');
-
-
-// TBA - REMOVE HTML COMMENTS (Speed and Security) + TBA Copyright
-function optimize_html_output($buffer) {
-    // Remove HTML comments
-    $buffer = preg_replace('/<!--(.|\s)*?-->/', '', $buffer);
-    
-    // Collapse multiple spaces, newlines, and tabs into a single space
-    $buffer = preg_replace('/\s+/', ' ', $buffer);
-
-    // Add custom comments at the end of the HTML output
-    $buffer .= "\n<!-- *** WEBSITE by TBA-Berlin.de *** -->";
-    $buffer .= "\n<!-- Performance optimized by TBA-ClearIT -->";
-
-    return $buffer;
+if (is_admin()) {
+    new TBA_Optimize_Updater(__FILE__);
 }
 
-function buffer_start() { 
-    ob_start('optimize_html_output'); 
-}
-
-function buffer_end() { 
-    ob_end_flush(); 
-}
-
-if (!is_admin()) {
-    add_action('template_redirect', 'buffer_start', 1);
-    add_action('shutdown', 'buffer_end', 1);
-}
