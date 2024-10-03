@@ -1,3 +1,4 @@
+<?php
 if (!defined('ABSPATH')) {
     exit; // Exit if accessed directly.
 }
@@ -41,18 +42,12 @@ function optimize_wp_for_speed_and_gdpr() {
         }
     }
 
-    // ---- Task 6: Remove HTML Comments for Guests ----
-    if (isset($options['remove_html_comments']) && $options['remove_html_comments']) {
+    // ---- Task 6: Remove HTML Comments and Whitespace for Guests ----
+    if (isset($options['remove_html_comments']) && $options['remove_html_comments'] ||
+        isset($options['remove_whitespace']) && $options['remove_whitespace']) {
         if (!is_user_logged_in()) { // Apply only to guests
             add_action('template_redirect', 'start_html_buffer');
             add_action('shutdown', 'end_html_buffer');
-        }
-    }
-
-    // ---- Task 7: Remove Whitespace for Guests ----
-    if (isset($options['remove_whitespace']) && $options['remove_whitespace']) {
-        if (!is_user_logged_in()) { // Apply only to guests
-            add_filter('final_output', 'optimize_html_output');
         }
     }
 }
