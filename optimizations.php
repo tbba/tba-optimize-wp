@@ -81,15 +81,16 @@ function end_optimization_buffer() {
 function apply_output_optimizations($buffer) {
     $options = get_option('tba_optimize_options', tba_optimize_default_options());
 
-    // ---- Task 7: Remove HTML Comments ----
+     // ---- Task 7: Remove HTML Comments ----
     if (isset($options['remove_html_comments']) && $options['remove_html_comments']) {
         // Remove HTML comments
-        $buffer = preg_replace('/<!--(.|\s)*?-->/', '', $buffer);
+        $buffer = preg_replace('/<!--(.*?)-->/', '', $buffer);
     }
 
     // ---- Task 8: Remove Whitespace ----
     if (isset($options['remove_whitespace']) && $options['remove_whitespace']) {
         // Collapse multiple spaces, newlines, and tabs into a single space
+        // The updated regex will replace all types of whitespace (spaces, newlines, tabs) with a single space
         $buffer = preg_replace('/\s+/', ' ', $buffer);
     }
 
