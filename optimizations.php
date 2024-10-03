@@ -35,19 +35,23 @@ function optimize_wp_for_speed_and_gdpr() {
         }
     }
 
-    // ---- Task 5: Remove jQuery Migrate ----
+    // ---- Task 5: Remove jQuery Migrate for Guests ----
     if (isset($options['remove_jquery_migrate']) && $options['remove_jquery_migrate']) {
-        add_action('wp_default_scripts', 'remove_jquery_migrate');
+        if (!is_user_logged_in()) { // Apply only to guests
+            add_action('wp_default_scripts', 'remove_jquery_migrate');
+        }
     }
 
-    // ---- Task 6: Remove HTML Comments ----
+    // ---- Task 6: Remove HTML Comments for Guests ----
     if (isset($options['remove_html_comments']) && $options['remove_html_comments']) {
-        add_action('template_redirect', 'start_html_buffer');
-        add_action('shutdown', 'end_html_buffer');
+        if (!is_user_logged_in()) { // Apply only to guests
+            add_action('template_redirect', 'start_html_buffer');
+            add_action('shutdown', 'end_html_buffer');
+        }
     }
 }
 
-// ---- Remove jQuery Migrate ----
+// ---- Remove jQuery Migrate for Guests ----
 function remove_jquery_migrate($scripts) {
     if (!is_admin() && isset($scripts->registered['jquery'])) {
         $jquery_dependencies = $scripts->registered['jquery']->deps;
@@ -55,7 +59,7 @@ function remove_jquery_migrate($scripts) {
     }
 }
 
-// ---- Buffer to remove HTML Comments ----
+// ---- Buffer to remove HTML Comments for Guests (ressource consuming) ----
 function start_html_buffer() {
     ob_start('optimize_html_output');
 }
