@@ -17,6 +17,9 @@ if (!defined('ABSPATH')) {
     exit; // Exit if accessed directly.
 }
 
+// Enable auto-updates for this plugin
+add_filter('auto_update_plugin', '__return_true');
+
 // Require the updater file
 require_once plugin_dir_path(__FILE__) . 'updater.php';
 
