@@ -77,10 +77,10 @@ function tba_optimize_render_settings_page() {
                 </tr>
 
                 <tr valign="top">
-                    <th scope="row">Remove Embeds (oEmbed Discovery Links)</th>
+                    <th scope="row">Remove Embeds</th>
                     <td>
                         <input type="checkbox" name="tba_optimize_options[remove_embeds]" value="1" <?php checked(1, isset($options['remove_embeds']) ? $options['remove_embeds'] : 0); ?> />
-                        <label for="tba_optimize_options[remove_embeds]">Remove embeds from content to avoid unnecessary resource consumption.</label>
+                        <label for="tba_optimize_options[remove_embeds]">Remove embeds (oEmbed Discovery Links) from content to avoid unnecessary resource consumption.</label>
                     </td>
                 </tr>
 
@@ -93,7 +93,7 @@ function tba_optimize_render_settings_page() {
                 </tr>
 
                 <tr valign="top">
-                    <th scope="row">Disable Dashicons for Non-Logged-In Users</th>
+                    <th scope="row">Disable Dashicons</th>
                     <td>
                         <input type="checkbox" name="tba_optimize_options[disable_dashicons]" value="1" <?php checked(1, isset($options['disable_dashicons']) ? $options['disable_dashicons'] : 0); ?> />
                         <label for="tba_optimize_options[disable_dashicons]">Disable loading Dashicons for non-logged-in users, reducing front-end resource usage.</label>
@@ -101,7 +101,7 @@ function tba_optimize_render_settings_page() {
                 </tr>
 
                 <tr valign="top">
-                    <th scope="row">Remove jQuery Migrate for Guests</th>
+                    <th scope="row">Remove jQuery Migrate</th>
                     <td>
                         <input type="checkbox" name="tba_optimize_options[remove_jquery_migrate]" value="1" <?php checked(1, isset($options['remove_jquery_migrate']) ? $options['remove_jquery_migrate'] : 0); ?> />
                         <label for="tba_optimize_options[remove_jquery_migrate]">Remove jQuery Migrate script for guests, improving front-end performance.</label>
@@ -109,7 +109,7 @@ function tba_optimize_render_settings_page() {
                 </tr>
 
                 <tr valign="top">
-                    <th scope="row">Remove HTML Comments for Guests (Resource-Intensive)</th>
+                    <th scope="row">Remove HTML Comments</th>
                     <td>
                         <input type="checkbox" name="tba_optimize_options[remove_html_comments]" value="1" <?php checked(1, isset($options['remove_html_comments']) ? $options['remove_html_comments'] : 0); ?> />
                         <label for="tba_optimize_options[remove_html_comments]">Remove HTML comments from the output for guests. This process can be resource-intensive on large pages.</label>
