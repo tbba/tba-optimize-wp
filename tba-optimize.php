@@ -6,7 +6,7 @@
  * Version: 1.0.1
  * Author: Carl Erling, TBA-Berlin
  * Author URI: https://www.tba-berlin.de
- * License: GPLv2 or later
+ * License: MIT
  * Text Domain: tba-optimize-wp
  *
  * GitHub Plugin URI: https://github.com/tbba/tba-optimize-wp
