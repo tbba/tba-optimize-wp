@@ -37,6 +37,11 @@ add_action('admin_menu', 'tba_optimize_add_settings_page');
 function tba_optimize_render_settings_page() {
     ?>
     <div class="wrap">
+        <?php
+        // Include the description before the settings form
+        require_once plugin_dir_path(__FILE__) . 'description.php'; 
+        ?>
+        
         <h1>TBA Optimization Settings</h1>
         <form method="post" action="options.php">
             <?php
