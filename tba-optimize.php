@@ -6,7 +6,7 @@
  * Version: 1.0.1
  * Author: Carl Erling, TBA-Berlin
  * Author URI: https://www.tba-berlin.de
- * License: MIT
+ * License: GPLv2 or later
  * Text Domain: tba-optimize-wp
  *
  * GitHub Plugin URI: https://github.com/tbba/tba-optimize-wp
@@ -104,7 +104,7 @@ function optimize_html_output($buffer) {
     $buffer = preg_replace('/\s+/', ' ', $buffer);
 
     // Add performance comment at the end of the HTML output
-    $buffer .= "\n<!-- Performance optimized by TBA-ClearIT -->";
+    $buffer .= "\n<!-- Performance optimized by TBA-Optimize -->";
 
     return $buffer;
 }
