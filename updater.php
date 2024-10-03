@@ -33,16 +33,12 @@ class TBA_Optimize_Updater {
 
     private function get_repository_info() {
         if (is_null($this->github_api_result)) {
-            $url = "https://api.github.com/repos/{$this->username}/{$this->repository}/releases";
+            $url = "https://api.github.com/repos/{$this->username}/{$this->repository}/releases/latest";
             $response = wp_remote_get($url);
             $this->github_api_result = wp_remote_retrieve_body($response);
 
             if (!empty($this->github_api_result)) {
                 $this->github_api_result = @json_decode($this->github_api_result);
-            }
-
-            if (is_array($this->github_api_result)) {
-                $this->github_api_result = $this->github_api_result[0]; // Get latest release
             }
         }
     }
@@ -54,12 +50,13 @@ class TBA_Optimize_Updater {
 
         $this->get_repository_info();
 
-        if ($this->github_api_result && version_compare($this->version, $this->github_api_result->tag_name, '<')) {
+        if ($this->github_api_result && version_compare($this->version, ltrim($this->github_api_result->tag_name, 'v'), '<')) {
+            // New version available, populate transient
             $package = $this->github_api_result->zipball_url;
 
             $obj = new stdClass();
             $obj->slug = $this->basename;
-            $obj->new_version = $this->github_api_result->tag_name;
+            $obj->new_version = ltrim($this->github_api_result->tag_name, 'v');
             $obj->url = $this->plugin['PluginURI'];
             $obj->package = $package;
 
@@ -75,7 +72,7 @@ class TBA_Optimize_Updater {
             $result = new stdClass();
             $result->name = $this->plugin['Name'];
             $result->slug = $this->basename;
-            $result->version = $this->github_api_result->tag_name;
+            $result->version = ltrim($this->github_api_result->tag_name, 'v');
             $result->author = $this->plugin['AuthorName'];
             $result->homepage = $this->plugin['PluginURI'];
             $result->requires = '5.0';
