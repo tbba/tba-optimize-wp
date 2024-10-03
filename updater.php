@@ -34,7 +34,8 @@ class TBA_Optimize_Updater {
     private function get_repository_info() {
         if (is_null($this->github_api_result)) {
             $url = "https://api.github.com/repos/{$this->username}/{$this->repository}/releases";
-            $this->github_api_result = wp_remote_retrieve_body(wp_remote_get($url));
+            $response = wp_remote_get($url);
+            $this->github_api_result = wp_remote_retrieve_body($response);
 
             if (!empty($this->github_api_result)) {
                 $this->github_api_result = @json_decode($this->github_api_result);
