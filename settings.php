@@ -36,11 +36,18 @@ add_action('admin_menu', 'tba_optimize_add_settings_page');
 
 // Add a settings link in the plugin list
 function tba_optimize_plugin_settings_link($links) {
+    // Create the "Settings" link
     $settings_link = '<a href="options-general.php?page=tba-optimize-settings">Settings</a>';
-    array_unshift($links, $settings_link);  // Add it to the beginning of the links array
+
+    // Insert the "Settings" link before the deactivate link and add the separator '|'
+    array_unshift($links, $settings_link);  // Add it at the beginning of the links array
     return $links;
 }
+
+// Apply the filter for the specific plugin
 add_filter('plugin_action_links_' . plugin_basename(__FILE__), 'tba_optimize_plugin_settings_link');
+
+
 
 
 // Render the settings page
