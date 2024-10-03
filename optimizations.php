@@ -1,4 +1,3 @@
-<?php
 if (!defined('ABSPATH')) {
     exit; // Exit if accessed directly.
 }
@@ -49,6 +48,13 @@ function optimize_wp_for_speed_and_gdpr() {
             add_action('shutdown', 'end_html_buffer');
         }
     }
+
+    // ---- Task 7: Remove Whitespace for Guests ----
+    if (isset($options['remove_whitespace']) && $options['remove_whitespace']) {
+        if (!is_user_logged_in()) { // Apply only to guests
+            add_filter('final_output', 'optimize_html_output');
+        }
+    }
 }
 
 // ---- Remove jQuery Migrate for Guests ----
@@ -59,7 +65,7 @@ function remove_jquery_migrate($scripts) {
     }
 }
 
-// ---- Buffer to remove HTML Comments for Guests (ressource consuming) ----
+// ---- Buffer to remove HTML Comments and Whitespace ----
 function start_html_buffer() {
     ob_start('optimize_html_output');
 }
