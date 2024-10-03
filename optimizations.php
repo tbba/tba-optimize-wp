@@ -5,63 +5,75 @@ if (!defined('ABSPATH')) {
 
 // All the optimizations are stored in this function
 function optimize_wp_for_speed_and_gdpr() {
+    $options = get_option('tba_optimize_options', tba_optimize_default_options());
+
     // ---- Task 1: Disable Emojis ----
-    remove_action('wp_head', 'print_emoji_detection_script', 7);
-    remove_action('wp_print_styles', 'print_emoji_styles');
-    remove_action('admin_print_scripts', 'print_emoji_detection_script');
-    remove_action('admin_print_styles', 'print_emoji_styles');
+    if (isset($options['disable_emojis']) && $options['disable_emojis']) {
+        remove_action('wp_head', 'print_emoji_detection_script', 7);
+        remove_action('wp_print_styles', 'print_emoji_styles');
+        remove_action('admin_print_scripts', 'print_emoji_detection_script');
+        remove_action('admin_print_styles', 'print_emoji_styles');
+    }
 
     // ---- Task 2: Remove Embeds (oEmbed Discovery Links and Related) ----
-    remove_action('wp_head', 'wp_oembed_add_discovery_links');
-    remove_action('wp_head', 'wp_oembed_add_host_js');
-    add_filter('embed_oembed_discover', '__return_false');
+    if (isset($options['remove_embeds']) && $options['remove_embeds']) {
+        remove_action('wp_head', 'wp_oembed_add_discovery_links');
+        remove_action('wp_head', 'wp_oembed_add_host_js');
+        add_filter('embed_oembed_discover', '__return_false');
+    }
 
     // ---- Task 3: Disable REST API Discovery Links and Headers ----
-    remove_action('wp_head', 'rest_output_link_wp_head', 10);
-    remove_action('template_redirect', 'rest_output_link_header', 11, 0);
-
-    // ---- Task 4: Remove Other Unnecessary Links in the Header ----
-    remove_action('wp_head', 'wp_generator');
-    remove_action('wp_head', 'rsd_link');
-    remove_action('wp_head', 'wlwmanifest_link');
-    remove_action('wp_head', 'wp_shortlink_wp_head');
-
-    // ---- Task 5: Disable Gravatar and Comment Cookies ----
-    add_filter('get_avatar', '__return_false');
-    update_option('show_avatars', 0);
-    add_filter('comment_form_defaults', 'disable_comment_cookies');
-    function disable_comment_cookies($defaults) {
-        $defaults['cookies'] = '';
-        return $defaults;
+    if (isset($options['disable_rest_api']) && $options['disable_rest_api']) {
+        remove_action('wp_head', 'rest_output_link_wp_head', 10);
+        remove_action('template_redirect', 'rest_output_link_header', 11, 0);
     }
 
-    // ---- Task 6: Remove Comment URL Field ----
-    add_filter('comment_form_default_fields', 'remove_comment_url_field');
-    function remove_comment_url_field($fields) {
-        if (isset($fields['url'])) {
-            unset($fields['url']);
+    // ---- Task 4: Disable Dashicons for Non-Logged-In Users ----
+    if (isset($options['disable_dashicons']) && $options['disable_dashicons']) {
+        if (!is_user_logged_in()) {
+            wp_deregister_style('dashicons');
         }
-        return $fields;
     }
 
-    // ---- Task 7: Disable RSS Feeds ----
-    function disable_rss_feeds() {
-        wp_die(__('No feed available, please visit the <a href="'. get_bloginfo('url') .'">homepage</a>!'));
-    }
-    add_action('do_feed', 'disable_rss_feeds', 1);
-    add_action('do_feed_rdf', 'disable_rss_feeds', 1);
-    add_action('do_feed_rss', 'disable_rss_feeds', 1);
-    add_action('do_feed_rss2', 'disable_rss_feeds', 1);
-    add_action('do_feed_atom', 'disable_rss_feeds', 1);
-
-    // ---- Task 8: Remove gmpg.org Profile Link ----
-    add_filter('avf_profile_head_tag', 'avia_remove_profile');
-    function avia_remove_profile() {
-        return false;
+    // ---- Task 5: Remove jQuery Migrate ----
+    if (isset($options['remove_jquery_migrate']) && $options['remove_jquery_migrate']) {
+        add_action('wp_default_scripts', 'remove_jquery_migrate');
     }
 
-    // ---- Task 9: Disable Dashicons for Non-Logged-In Users Only ----
-    if (!is_user_logged_in()) {
-        wp_deregister_style('dashicons');
+    // ---- Task 6: Remove HTML Comments and Add Custom Comments ----
+    if (isset($options['remove_html_comments']) && $options['remove_html_comments']) {
+        add_action('template_redirect', 'start_html_buffer');
+        add_action('shutdown', 'end_html_buffer');
     }
+}
+
+// ---- Remove jQuery Migrate ----
+function remove_jquery_migrate($scripts) {
+    if (!is_admin() && isset($scripts->registered['jquery'])) {
+        $jquery_dependencies = $scripts->registered['jquery']->deps;
+        $scripts->registered['jquery']->deps = array_diff($jquery_dependencies, array('jquery-migrate'));
+    }
+}
+
+// ---- Buffer to remove HTML Comments ----
+function start_html_buffer() {
+    ob_start('optimize_html_output');
+}
+
+function end_html_buffer() {
+    ob_end_flush();
+}
+
+function optimize_html_output($buffer) {
+    // Remove HTML comments
+    $buffer = preg_replace('/<!--(.|\s)*?-->/', '', $buffer);
+    
+    // Collapse multiple spaces, newlines, and tabs into a single space
+    $buffer = preg_replace('/\s+/', ' ', $buffer);
+
+    // Add custom comments at the end of the HTML output
+    $buffer .= "\n<!-- *** WEBSITE by TBA-Berlin.de *** -->";
+    $buffer .= "\n<!-- Performance optimized by TBA-ClearIT -->";
+
+    return $buffer;
 }
