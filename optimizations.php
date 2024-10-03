@@ -42,21 +42,22 @@ function optimize_wp_for_speed_and_gdpr() {
         }
     }
 
-    // ---- Task 6: Remove HTML Comments for Guests ----
-    if (isset($options['remove_html_comments']) && $options['remove_html_comments']) {
+    // ---- Task 6: Start Buffering Output if Needed ----
+    if (should_buffer_output()) {
         if (!is_user_logged_in()) { // Apply only to guests
-            add_action('template_redirect', 'start_html_comment_buffer');
-            add_action('shutdown', 'end_html_comment_buffer');
+            add_action('template_redirect', 'start_optimization_buffer');
+            add_action('shutdown', 'end_optimization_buffer');
         }
     }
+}
 
-    // ---- Task 7: Remove Whitespace for Guests ----
-    if (isset($options['remove_whitespace']) && $options['remove_whitespace']) {
-        if (!is_user_logged_in()) { // Apply only to guests
-            add_action('template_redirect', 'start_whitespace_buffer');
-            add_action('shutdown', 'end_whitespace_buffer');
-        }
-    }
+// Function to determine if buffering is needed
+function should_buffer_output() {
+    $options = get_option('tba_optimize_options', tba_optimize_default_options());
+
+    // Start buffering only if either HTML comment removal or whitespace removal is enabled
+    return (isset($options['remove_html_comments']) && $options['remove_html_comments']) ||
+           (isset($options['remove_whitespace']) && $options['remove_whitespace']);
 }
 
 // ---- Remove jQuery Migrate for Guests ----
@@ -67,30 +68,31 @@ function remove_jquery_migrate($scripts) {
     }
 }
 
-// ---- Buffer to remove HTML Comments ----
-function start_html_comment_buffer() {
-    ob_start('remove_html_comments');
+// ---- Buffer to apply optimizations ----
+function start_optimization_buffer() {
+    ob_start('apply_output_optimizations');
 }
 
-function end_html_comment_buffer() {
+function end_optimization_buffer() {
     ob_end_flush();
 }
 
-function remove_html_comments($buffer) {
-    // Remove HTML comments
-    return preg_replace('/<!--(.|\s)*?-->/', '', $buffer);
-}
+// Function that applies the optimizations based on settings
+function apply_output_optimizations($buffer) {
+    $options = get_option('tba_optimize_options', tba_optimize_default_options());
 
-// ---- Buffer to remove Whitespace ----
-function start_whitespace_buffer() {
-    ob_start('remove_whitespace');
-}
+    // ---- Task 7: Remove HTML Comments ----
+    if (isset($options['remove_html_comments']) && $options['remove_html_comments']) {
+        // Remove HTML comments
+        $buffer = preg_replace('/<!--(.|\s)*?-->/', '', $buffer);
+    }
 
-function end_whitespace_buffer() {
-    ob_end_flush();
-}
+    // ---- Task 8: Remove Whitespace ----
+    if (isset($options['remove_whitespace']) && $options['remove_whitespace']) {
+        // Collapse multiple spaces, newlines, and tabs into a single space
+        $buffer = preg_replace('/\s+/', ' ', $buffer);
+    }
 
-function remove_whitespace($buffer) {
-    // Collapse multiple spaces, newlines, and tabs into a single space
-    return preg_replace('/\s+/', ' ', $buffer);
+    // Return the optimized buffer
+    return $buffer;
 }
