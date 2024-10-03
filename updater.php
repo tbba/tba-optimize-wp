@@ -1,4 +1,8 @@
 <?php
+if (!defined('ABSPATH')) {
+    exit; // Exit if accessed directly.
+}
+
 // --- GitHub Updater Integration ---
 
 class TBA_Optimize_Updater {
@@ -105,4 +109,3 @@ class TBA_Optimize_Updater {
 if (is_admin()) {
     new TBA_Optimize_Updater(__FILE__);
 }
-
