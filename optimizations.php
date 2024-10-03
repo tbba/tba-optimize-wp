@@ -40,7 +40,7 @@ function optimize_wp_for_speed_and_gdpr() {
         add_action('wp_default_scripts', 'remove_jquery_migrate');
     }
 
-    // ---- Task 6: Remove HTML Comments and Add Custom Comments ----
+    // ---- Task 6: Remove HTML Comments ----
     if (isset($options['remove_html_comments']) && $options['remove_html_comments']) {
         add_action('template_redirect', 'start_html_buffer');
         add_action('shutdown', 'end_html_buffer');
@@ -71,9 +71,6 @@ function optimize_html_output($buffer) {
     // Collapse multiple spaces, newlines, and tabs into a single space
     $buffer = preg_replace('/\s+/', ' ', $buffer);
 
-    // Add custom comments at the end of the HTML output
-    $buffer .= "\n<!-- *** WEBSITE by TBA-Berlin.de *** -->";
-    $buffer .= "\n<!-- Performance optimized by TBA-ClearIT -->";
-
+    // Return the optimized buffer without adding any custom comments
     return $buffer;
 }
