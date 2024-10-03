@@ -42,12 +42,19 @@ function optimize_wp_for_speed_and_gdpr() {
         }
     }
 
-    // ---- Task 6: Remove HTML Comments and Whitespace for Guests ----
-    if (isset($options['remove_html_comments']) && $options['remove_html_comments'] ||
-        isset($options['remove_whitespace']) && $options['remove_whitespace']) {
+    // ---- Task 6: Remove HTML Comments for Guests ----
+    if (isset($options['remove_html_comments']) && $options['remove_html_comments']) {
         if (!is_user_logged_in()) { // Apply only to guests
-            add_action('template_redirect', 'start_html_buffer');
-            add_action('shutdown', 'end_html_buffer');
+            add_action('template_redirect', 'start_html_comment_buffer');
+            add_action('shutdown', 'end_html_comment_buffer');
+        }
+    }
+
+    // ---- Task 7: Remove Whitespace for Guests ----
+    if (isset($options['remove_whitespace']) && $options['remove_whitespace']) {
+        if (!is_user_logged_in()) { // Apply only to guests
+            add_action('template_redirect', 'start_whitespace_buffer');
+            add_action('shutdown', 'end_whitespace_buffer');
         }
     }
 }
@@ -60,22 +67,30 @@ function remove_jquery_migrate($scripts) {
     }
 }
 
-// ---- Buffer to remove HTML Comments and Whitespace ----
-function start_html_buffer() {
-    ob_start('optimize_html_output');
+// ---- Buffer to remove HTML Comments ----
+function start_html_comment_buffer() {
+    ob_start('remove_html_comments');
 }
 
-function end_html_buffer() {
+function end_html_comment_buffer() {
     ob_end_flush();
 }
 
-function optimize_html_output($buffer) {
+function remove_html_comments($buffer) {
     // Remove HTML comments
-    $buffer = preg_replace('/<!--(.|\s)*?-->/', '', $buffer);
-    
-    // Collapse multiple spaces, newlines, and tabs into a single space
-    $buffer = preg_replace('/\s+/', ' ', $buffer);
+    return preg_replace('/<!--(.|\s)*?-->/', '', $buffer);
+}
 
-    // Return the optimized buffer without adding any custom comments
-    return $buffer;
+// ---- Buffer to remove Whitespace ----
+function start_whitespace_buffer() {
+    ob_start('remove_whitespace');
+}
+
+function end_whitespace_buffer() {
+    ob_end_flush();
+}
+
+function remove_whitespace($buffer) {
+    // Collapse multiple spaces, newlines, and tabs into a single space
+    return preg_replace('/\s+/', ' ', $buffer);
 }
