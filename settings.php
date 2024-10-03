@@ -11,7 +11,8 @@ function tba_optimize_default_options() {
         'disable_rest_api' => true,
         'disable_dashicons' => true,
         'remove_jquery_migrate' => true,
-        'remove_html_comments' => false,  // Not on by default since it's resource-intensive
+        'remove_html_comments' => false,
+        'remove_whitespace' => false  // Not on by default since it can slow down large pages
     );
 }
 
@@ -35,7 +36,6 @@ add_action('admin_menu', 'tba_optimize_add_settings_page');
 
 
 /// Add a settings link in the plugin list
-
 function tba_optimize_add_action_links( $actions ) {
     // Add the Settings link
     $mylinks = array(
@@ -47,9 +47,6 @@ function tba_optimize_add_action_links( $actions ) {
     return $actions;
 }
 add_filter( 'plugin_action_links_' . plugin_basename(__FILE__), 'tba_optimize_add_action_links' );
-
-
-
 
 
 // Render the settings page
@@ -112,7 +109,15 @@ function tba_optimize_render_settings_page() {
                     <th scope="row">Remove HTML Comments</th>
                     <td>
                         <input type="checkbox" name="tba_optimize_options[remove_html_comments]" value="1" <?php checked(1, isset($options['remove_html_comments']) ? $options['remove_html_comments'] : 0); ?> />
-                        <label for="tba_optimize_options[remove_html_comments]">Remove HTML comments from the output for guests. This process can be resource-intensive on large pages.</label>
+                        <label for="tba_optimize_options[remove_html_comments]">Remove HTML comments from the output for guests.</label>
+                    </td>
+                </tr>
+
+                <tr valign="top">
+                    <th scope="row">Remove Whitespace</th>
+                    <td>
+                        <input type="checkbox" name="tba_optimize_options[remove_whitespace]" value="1" <?php checked(1, isset($options['remove_whitespace']) ? $options['remove_whitespace'] : 0); ?> />
+                        <label for="tba_optimize_options[remove_whitespace]">Remove unnecessary whitespaces from the HTML output for guests. (This can slightly slow down WordPress on large pages, if no cache plugin is enabled.)</label>
                     </td>
                 </tr>
             </table>
@@ -130,5 +135,6 @@ function tba_optimize_validate_options($input) {
     $input['disable_dashicons'] = isset($input['disable_dashicons']) ? 1 : 0;
     $input['remove_jquery_migrate'] = isset($input['remove_jquery_migrate']) ? 1 : 0;
     $input['remove_html_comments'] = isset($input['remove_html_comments']) ? 1 : 0;
+    $input['remove_whitespace'] = isset($input['remove_whitespace']) ? 1 : 0;
     return $input;
 }
