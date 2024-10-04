@@ -44,27 +44,28 @@ class TBA_Optimize_Updater {
     }
 
     public function modify_transient($transient) {
-        if (!is_object($transient)) {
-            $transient = new stdClass();
-        }
-
-        $this->get_repository_info();
-
-        if ($this->github_api_result && version_compare($this->version, ltrim($this->github_api_result->tag_name, 'v'), '<')) {
-            // New version available, populate transient
-            $package = $this->github_api_result->zipball_url;
-
-            $obj = new stdClass();
-            $obj->slug = $this->basename;
-            $obj->new_version = ltrim($this->github_api_result->tag_name, 'v');
-            $obj->url = $this->plugin['PluginURI'];
-            $obj->package = $package;
-
-            $transient->response[$this->basename] = $obj;
-        }
-
-        return $transient;
+    if (!is_object($transient)) {
+        $transient = new stdClass();
     }
+
+    $this->get_repository_info();
+
+    if ($this->github_api_result && version_compare($this->version, ltrim($this->github_api_result->tag_name, 'v'), '<')) {
+        $package = $this->github_api_result->zipball_url;
+
+        $obj = new stdClass();
+        // Remove any version numbers from the folder name
+        $obj->slug = preg_replace('/-\d+(\.\d+)*$/', '', plugin_basename($this->file)); 
+        $obj->new_version = ltrim($this->github_api_result->tag_name, 'v');
+        $obj->url = $this->plugin['PluginURI'];
+        $obj->package = $package;
+
+        $transient->response[$obj->slug] = $obj;
+    }
+
+    return $transient;
+}
+
 
     public function plugin_popup($result, $action, $args) {
         if (!empty($args->slug) && $args->slug === $this->basename) {
