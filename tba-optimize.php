@@ -1,9 +1,9 @@
 <?php
 /**
- * Plugin Name: TBA Optimization for Speed and GDPR
+ * Plugin Name: 1 TBA Optimization for Speed and GDPR
  * Plugin URI: https://github.com/tbba/tba-optimize-wp
  * Description: A plugin to optimize WordPress for speed and GDPR compliance by removing unnecessary elements.
- * Version: 1.12
+ * Version: 1.13
  * Author: Carl Erling, TBA-Berlin
  * Author URI: https://www.tba-berlin.de
  * License: GPLv2 or later

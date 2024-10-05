@@ -15,7 +15,7 @@ class TBA_Optimize_Updater {
     private $github_api_result;
     private $plugin_data;
     private $version;
-    private $testing = false;  // Toggle testing on/off
+    private $testing = true;  // Toggle testing true/false
 
     public function __construct($file) {
         $this->file = $file;
@@ -62,25 +62,34 @@ class TBA_Optimize_Updater {
         if ($this->github_api_result && version_compare($this->version, ltrim($this->github_api_result->tag_name, 'v'), '<')) {
             $package = $this->github_api_result->zipball_url;
 
-            $expected_slug = 'tba-optimize-wp';  // Expected slug
-            $real_slug = preg_replace('/(-main|-?\d+(\.\d+)*)$/', '', plugin_basename($this->file)); // Real slug
+            // Extract folder name as real slug
+            $real_slug = dirname(plugin_basename($this->file));
 
-            // Send email if testing mode is on and there's a mismatch in slug
-            if ($this->testing && $expected_slug !== $real_slug) {
-                $this->send_testing_info('Slug Mismatch Detected', 'Expected: ' . $expected_slug . ' | Real: ' . $real_slug);
-            }
+            // Expected plugin file path (adjust this to your main plugin file)
+            $plugin_file = 'tba-optimize-wp/tba-optimize-wp.php'; // Change to your actual main plugin file
 
             $obj = new stdClass();
             $obj->slug = $real_slug;
             $obj->new_version = ltrim($this->github_api_result->tag_name, 'v');
-            $obj->url = $this->plugin['PluginURI'];
+            $obj->url = 'https://github.com/tbba/tba-optimize-wp'; // URL to your plugin (GitHub or plugin website)
             $obj->package = $package;
 
-            // Assign the update to the transient response
-            $transient->response[$obj->slug] = $obj;
+            // Add the plugin field, this is the path to your plugin's main file
+            $obj->plugin = $plugin_file;
 
-            // Debugging: Log the update data to ensure it's set correctly
-            error_log('Update Detected: ' . print_r($obj, true));
+            // Add the ID field (optional, but useful)
+            $obj->id = "github.com/{$this->username}/{$this->repository}";
+
+            // Assign the update to the transient response
+            $transient->response[$plugin_file] = $obj;
+
+            if ($this->testing) {
+                // Debugging: Log the update data to ensure it's set correctly
+                error_log('Update Detected: ' . print_r($obj, true));
+
+                // Send testing email with detailed info
+                $this->send_testing_info('Update Detected', print_r($obj, true));
+            }
         }
 
         return $transient;
@@ -125,12 +134,4 @@ class TBA_Optimize_Updater {
 
     // --- Send testing info to the admin email ---
     private function send_testing_info($subject, $message) {
-        $admin_email = get_option('admin_email');
-        $full_subject = '[TBA Optimize Testing] ' . $subject;
-        wp_mail($admin_email, $full_subject, $message);
-    }
-}
-
-if (is_admin()) {
-    new TBA_Optimize_Updater(__FILE__);
-}
+        $admin_email = get
