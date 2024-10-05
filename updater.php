@@ -62,8 +62,8 @@ class TBA_Optimize_Updater {
             $package = $this->github_api_result->zipball_url;
 
             $obj = new stdClass();
-            // Remove any version numbers from the folder name
-            $obj->slug = preg_replace('/-\d+(\.\d+)*$/', '', plugin_basename($this->file)); 
+            // Remove any version numbers and -main suffix from the folder name
+            $obj->slug = preg_replace('/(-main|-?\d+(\.\d+)*)$/', '', plugin_basename($this->file));
             $obj->new_version = ltrim($this->github_api_result->tag_name, 'v');
             $obj->url = $this->plugin['PluginURI'];
             $obj->package = $package;

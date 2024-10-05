@@ -42,7 +42,7 @@ function optimize_wp_for_speed_and_gdpr() {
         }
     }
 
-    // ---- Task 6: Start Buffering Output if Needed ----
+    // ---- Task 6-7: Buffer Output for HTML Comment and Whitespace Removal ----
     if (should_buffer_output()) {
         if (!is_user_logged_in()) { // Apply only to guests
             add_action('template_redirect', 'start_optimization_buffer');
@@ -68,7 +68,7 @@ function remove_jquery_migrate($scripts) {
     }
 }
 
-// ---- Buffer to apply optimizations ----
+// ---- Buffer to apply HTML Comments and Whitespace optimizations ----
 function start_optimization_buffer() {
     ob_start('apply_output_optimizations');
 }
@@ -81,16 +81,15 @@ function end_optimization_buffer() {
 function apply_output_optimizations($buffer) {
     $options = get_option('tba_optimize_options', tba_optimize_default_options());
 
-     // ---- Task 7: Remove HTML Comments ----
+    // ---- Task 6: Remove HTML Comments ----
     if (isset($options['remove_html_comments']) && $options['remove_html_comments']) {
         // Remove HTML comments
         $buffer = preg_replace('/<!--(.*?)-->/', '', $buffer);
     }
 
-    // ---- Task 8: Remove Whitespace ----
+    // ---- Task 7: Remove Whitespace ----
     if (isset($options['remove_whitespace']) && $options['remove_whitespace']) {
         // Collapse multiple spaces, newlines, and tabs into a single space
-        // The updated regex will replace all types of whitespace (spaces, newlines, tabs) with a single space
         $buffer = preg_replace('/\s+/', ' ', $buffer);
     }
 
