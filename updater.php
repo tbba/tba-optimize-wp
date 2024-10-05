@@ -134,4 +134,12 @@ class TBA_Optimize_Updater {
 
     // --- Send testing info to the admin email ---
     private function send_testing_info($subject, $message) {
-        $admin_email = get
+        $admin_email = get_option('admin_email');
+        $full_subject = '[TBA Optimize Testing] ' . $subject;
+        wp_mail($admin_email, $full_subject, $message);
+    }
+}
+
+if (is_admin()) {
+    new TBA_Optimize_Updater(__FILE__);
+}
