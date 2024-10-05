@@ -15,6 +15,7 @@ class TBA_Optimize_Updater {
     private $github_api_result;
     private $plugin_data;
     private $version;
+    private $testing = false;  // Toggle testing on/off
 
     public function __construct($file) {
         $this->file = $file;
@@ -61,9 +62,16 @@ class TBA_Optimize_Updater {
         if ($this->github_api_result && version_compare($this->version, ltrim($this->github_api_result->tag_name, 'v'), '<')) {
             $package = $this->github_api_result->zipball_url;
 
+            $expected_slug = 'tba-optimize-wp';  // Expected slug
+            $real_slug = preg_replace('/(-main|-?\d+(\.\d+)*)$/', '', plugin_basename($this->file)); // Real slug
+
+            // Send email if testing mode is on and there's a mismatch in slug
+            if ($this->testing && $expected_slug !== $real_slug) {
+                $this->send_testing_info('Slug Mismatch Detected', 'Expected: ' . $expected_slug . ' | Real: ' . $real_slug);
+            }
+
             $obj = new stdClass();
-            // Remove any version numbers and -main suffix from the folder name
-            $obj->slug = preg_replace('/(-main|-?\d+(\.\d+)*)$/', '', plugin_basename($this->file));
+            $obj->slug = $real_slug;
             $obj->new_version = ltrim($this->github_api_result->tag_name, 'v');
             $obj->url = $this->plugin['PluginURI'];
             $obj->package = $package;
@@ -113,6 +121,13 @@ class TBA_Optimize_Updater {
         }
 
         return $result;
+    }
+
+    // --- Send testing info to the admin email ---
+    private function send_testing_info($subject, $message) {
+        $admin_email = get_option('admin_email');
+        $full_subject = '[TBA Optimize Testing] ' . $subject;
+        wp_mail($admin_email, $full_subject, $message);
     }
 }
 
