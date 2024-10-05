@@ -1,34 +1,39 @@
 <?php
-/**
- * Plugin Name: 1 TBA Optimization for Speed and GDPR
- * Plugin URI: https://github.com/tbba/tba-optimize-wp
- * Description: A plugin to optimize WordPress for speed and GDPR compliance by removing unnecessary elements.
- * Version: 1.14
- * Author: Carl Erling, TBA-Berlin
- * Author URI: https://www.tba-berlin.de
- * License: GPLv2 or later
- * Text Domain: tba-optimize-wp
- *
- * GitHub Plugin URI: https://github.com/tbba/tba-optimize-wp
- * GitHub Release Asset: true
- */
-
 if (!defined('ABSPATH')) {
     exit; // Exit if accessed directly.
 }
 
-// Enable auto-updates for this plugin
+/**
+ * Plugin Name: TBA Optimization for Speed and GDPR
+ * Plugin URI: https://github.com/tbba/tba-optimize-wp
+ * Description: A plugin to optimize WordPress for speed and GDPR compliance by removing unnecessary elements.
+ * Version: 1.15  // Die Version muss hier manuell aktualisiert werden, WordPress benötigt dies für Updates
+ * Author: Carl Erling, TBA-Berlin
+ * Author URI: https://www.tba-berlin.de
+ * License: GPLv2 or later
+ * Text Domain: tba-optimize-wp
+ */
+
+// Plugin-Version aus dem Header extrahieren und als Konstante definieren
+function tba_optimize_define_version() {
+    // get_plugin_data holt die Informationen aus dem Plugin-Header
+    $plugin_data = get_plugin_data(__FILE__);
+    if (!defined('TBA_OPTIMIZE_VERSION')) {
+        define('TBA_OPTIMIZE_VERSION', $plugin_data['Version']);
+    }
+}
+add_action('plugins_loaded', 'tba_optimize_define_version');
+
+// Aktivieren der automatischen Updates für dieses Plugin
 add_filter('auto_update_plugin', '__return_true');
 
-
-// Include separate files
+// Zusätzliche Plugin-Dateien einbinden
 require_once plugin_dir_path(__FILE__) . 'settings.php';
 require_once plugin_dir_path(__FILE__) . 'optimizations.php';
 require_once plugin_dir_path(__FILE__) . 'updater.php';
 
-// Use settings to toggle optimizations
+// Plugin-Optimierungen bei Bedarf aktivieren
 $options = get_option('tba_optimize_options', tba_optimize_default_options());
 if (isset($options['enable_optimizations']) && $options['enable_optimizations']) {
-    // Enable optimizations
     add_action('init', 'optimize_wp_for_speed_and_gdpr');
 }

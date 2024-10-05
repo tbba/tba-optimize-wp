@@ -4,18 +4,24 @@ if (!defined('ABSPATH')) {
 }
 
 // --- GitHub Updater Integration ---
-
 class TBA_Optimize_Updater {
     private $file;
     private $plugin;
     private $basename;
     private $active;
-    private $username = 'tbba'; // GitHub username
-    private $repository = 'tba-optimize-wp'; // GitHub repository name
-    private $github_api_result;
     private $plugin_data;
     private $version;
-    private $testing = true;  // Toggle testing true/false
+
+    // Zentrale Konfigurationsinformationen (redundante Informationen entfernen)
+    private $config = [
+        'username'    => 'tbba', // GitHub-Benutzername
+        'repository'  => 'tba-optimize-wp', // GitHub-Repository-Name
+        'api_base'    => 'https://api.github.com/repos/', // Basis-URL für API-Aufrufe
+        'plugin_slug' => 'tba-optimize-wp/tba-optimize-wp.php', // Plugin-Slug
+        'plugin_url'  => 'https://github.com/tbba/tba-optimize-wp', // Plugin-URL
+    ];
+
+    private $testing = true;  // Toggle für Testmodus
 
     public function __construct($file) {
         $this->file = $file;
@@ -29,24 +35,18 @@ class TBA_Optimize_Updater {
         $this->plugin     = get_plugin_data($this->file);
         $this->basename   = plugin_basename($this->file);
         $this->active     = is_plugin_active($this->basename);
-        $this->version    = $this->plugin['Version'];
+        $this->version    = TBA_OPTIMIZE_VERSION;  // Version aus dem statischen Header
     }
 
     private function get_repository_info() {
         if (is_null($this->github_api_result)) {
-            $url = "https://api.github.com/repos/{$this->username}/{$this->repository}/releases/latest";
+            // Erstelle die API-URL für das Repository
+            $url = "{$this->config['api_base']}{$this->config['username']}/{$this->config['repository']}/releases/latest";
             $response = wp_remote_get($url);
             $this->github_api_result = wp_remote_retrieve_body($response);
 
             if (!empty($this->github_api_result)) {
-                $this->github_api_result = @json_decode($this->github_api_result);
-
-                // Debugging: Log the API response to ensure it's valid
-                if (is_wp_error($response)) {
-                    error_log('GitHub API Error: ' . $response->get_error_message());
-                } else {
-                    error_log('GitHub API Result: ' . print_r($this->github_api_result, true));
-                }
+                $this->github_api_result = json_decode($this->github_api_result);
             }
         }
     }
@@ -58,37 +58,19 @@ class TBA_Optimize_Updater {
 
         $this->get_repository_info();
 
-        // Ensure we have a valid GitHub API response and check if an update is needed
         if ($this->github_api_result && version_compare($this->version, ltrim($this->github_api_result->tag_name, 'v'), '<')) {
             $package = $this->github_api_result->zipball_url;
 
-            // Extract folder name as real slug
-            $real_slug = dirname(plugin_basename($this->file));
-
-            // Expected plugin file path (adjust this to your main plugin file)
-            $plugin_file = 'tba-optimize-wp/tba-optimize-wp.php'; // Change to your actual main plugin file
-
             $obj = new stdClass();
-            $obj->slug = $real_slug;
+            $obj->slug = $this->config['plugin_slug'];  // Verwende den zentralen Slug
             $obj->new_version = ltrim($this->github_api_result->tag_name, 'v');
-            $obj->url = 'https://github.com/tbba/tba-optimize-wp'; // URL to your plugin (GitHub or plugin website)
+            $obj->url = $this->config['plugin_url'];    // Plugin-URL aus der Konfiguration
             $obj->package = $package;
 
-            // Add the plugin field, this is the path to your plugin's main file
-            $obj->plugin = $plugin_file;
-
-            // Add the ID field (optional, but useful)
-            $obj->id = "github.com/{$this->username}/{$this->repository}";
-
-            // Assign the update to the transient response
-            $transient->response[$plugin_file] = $obj;
+            $transient->response[$this->config['plugin_slug']] = $obj;
 
             if ($this->testing) {
-                // Debugging: Log the update data to ensure it's set correctly
                 error_log('Update Detected: ' . print_r($obj, true));
-
-                // Send testing email with detailed info
-                $this->send_testing_info('Update Detected', print_r($obj, true));
             }
         }
 
@@ -103,7 +85,7 @@ class TBA_Optimize_Updater {
             $result->slug = $this->basename;
             $result->version = ltrim($this->github_api_result->tag_name, 'v');
             $result->author = $this->plugin['AuthorName'];
-            $result->homepage = $this->plugin['PluginURI'];
+            $result->homepage = $this->config['plugin_url'];  // URL zentral aus der Konfiguration
             $result->requires = '5.0';
             $result->tested = '5.8';
             $result->download_link = $this->github_api_result->zipball_url;
