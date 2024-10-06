@@ -14,30 +14,6 @@ if (!defined('ABSPATH')) {
  * Text Domain: tba-optimize-wp
  */
 
-// Define TEST for debugging purposes
-define('TEST', 1); // Set to 1 to enable logging, 0 to disable
-
-// Define log file path
-$log_file = plugin_dir_path(__FILE__) . 'tba_optimize_log.txt';
-
-// Function to log messages (only for admins)
-function tba_optimize_log($message) {
-    if (current_user_can('administrator') && defined('TEST') && TEST === 1) {
-        global $log_file;
-
-        // Clear log file at the beginning of the run
-        if (!file_exists($log_file)) {
-            file_put_contents($log_file, ""); // Clear the log file
-        }
-
-        $log_message = "==========\n" . date('Y-m-d H:i:s') . ": " . $message . "\n";
-        file_put_contents($log_file, $log_message, FILE_APPEND);
-    }
-}
-
-// Log the start of the plugin run
-tba_optimize_log("Starting plugin execution.");
-
 // Extract and define the plugin version from the plugin header
 function tba_optimize_define_version() {
     if (!defined('TBA_OPTIMIZE_VERSION')) {
@@ -49,8 +25,6 @@ function tba_optimize_define_version() {
         } else {
             define('TBA_OPTIMIZE_VERSION', '1.0.0'); // Fallback version if no match
         }
-
-        tba_optimize_log("TBA_OPTIMIZE_VERSION set: " . TBA_OPTIMIZE_VERSION);
     }
 }
 add_action('plugins_loaded', 'tba_optimize_define_version');
@@ -86,6 +60,3 @@ function tba_optimize_init_updater() {
         new WP_GitHub_Updater($config);
     }
 }
-
-// Log the end of the plugin run
-tba_optimize_log("Plugin execution completed.");
