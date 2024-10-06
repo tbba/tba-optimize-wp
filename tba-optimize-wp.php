@@ -33,6 +33,7 @@ require_once plugin_dir_path(__FILE__) . 'vendor/wp-updater/src/Plugin-Updater.p
 function tba_optimize_init_updater() {
     if (is_admin()) {
         // Initialize the updater using the MakeitWorkPress namespace
+        $updater = \MakeitWorkPress\WP_Updater\Boot::instance();
 
         // Add your GitHub repository information
         $updater->add([
