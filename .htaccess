@@ -1,5 +1,6 @@
 # Deny access to the error log file
-<Files "tba-optimize-errors.log">
+<Files "tba_optimize_error_log.txt">
 	Order allow,deny
 	Deny from all
 </Files>
+

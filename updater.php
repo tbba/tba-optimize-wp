@@ -4,6 +4,8 @@ if (!defined('ABSPATH')) {
 }
 
 // --- GitHub Updater Integration ---
+define('TEST', 1); // Enable debugging and logging (1 for ON, 0 for OFF)
+
 class TBA_Optimize_Updater {
     private $file;
     private $plugin;
@@ -12,29 +14,60 @@ class TBA_Optimize_Updater {
     private $plugin_data;
     private $version;
     private $github_api_result;
+    private $log_file;
 
-    // Zentrale Konfigurationsinformationen
+    // Central Configuration
     private $config = [
-        'username'     => 'tbba', // GitHub-Benutzername
-        'repository'   => 'tba-optimize-wp', // GitHub-Repository-Name
-        'api_base'     => 'https://api.github.com/repos/', // Basis-URL für API-Aufrufe
-        'plugin_slug'  => 'tba-optimize-wp', // Plugin-Slug
-        'plugin'       => 'tba-optimize-wp/tba-optimize-wp.php', // Pfad zur Haupt-Plugin-Datei relativ zum Plugins-Verzeichnis
-        'plugin_url'   => 'https://github.com/tbba/tba-optimize-wp', // Plugin-URL
-        'requires'     => '5.0', // Mindestanforderung für WordPress-Version
-        'tested'       => '5.8', // Getestet bis WordPress-Version
-        'requires_php' => '7.0', // Mindestanforderung für PHP-Version
+        'username'     => 'tbba', // GitHub username
+        'repository'   => 'tba-optimize-wp', // GitHub repository name
+        'api_base'     => 'https://api.github.com/repos/', // API base URL
+        'plugin_slug'  => 'tba-optimize-wp', // Expected Plugin slug
+        'plugin'       => 'tba-optimize-wp/tba-optimize-wp.php', // Path to the plugin's main file
+        'plugin_url'   => 'https://github.com/tbba/tba-optimize-wp', // Plugin URL
+        'requires'     => '5.0', // Minimum WP version
+        'tested'       => '5.8', // Tested up to WP version
+        'requires_php' => '7.0', // Minimum PHP version
     ];
 
-    // Enable debugging and logging (1 for ON, 0 for OFF)
-    const TEST = 1;
+    private $testing = TEST; // Toggle for test mode
 
     public function __construct($file) {
         $this->file = $file;
+        $this->log_file = plugin_dir_path(__FILE__) . 'tba_optimize_log.txt'; // Log file location
+
+        if ($this->testing) {
+            $this->check_log_file();
+        }
+
         add_action('admin_init', array($this, 'set_plugin_properties'));
-        add_filter('pre_set_site_transient_update_plugins', array($this, 'modify_transient'), 10, 1);
+        add_filter('pre_set_site_transient_update_plugins', array($this, 'modify_transient'), 5, 1); // timing 5 = early
         add_filter('plugins_api', array($this, 'plugin_popup'), 10, 3);
         add_filter('upgrader_post_install', array($this, 'after_install'), 10, 3);
+    }
+
+    // Check if the log file exists, create it if it doesn't, and check write permissions
+    private function check_log_file() {
+        if (!file_exists($this->log_file)) {
+            file_put_contents($this->log_file, "==========\n" . date('Y-m-d H:i:s') . ": Log file created\n", FILE_APPEND);
+        }
+
+        if (!is_writable($this->log_file)) {
+            // If the log file is not writable, use error_log as a fallback
+            error_log("Log file {$this->log_file} is not writable.");
+            return false;
+        }
+
+        $this->log("Logging is enabled.");
+        return true;
+    }
+
+    private function log($message) {
+        if ($this->testing && is_writable($this->log_file)) {
+            $log_message = "==========\n" . date('Y-m-d H:i:s') . ": " . $message . "\n";
+            file_put_contents($this->log_file, $log_message, FILE_APPEND);
+        } else {
+            error_log($message); // Fallback to error_log if the file is not writable
+        }
     }
 
     public function set_plugin_properties() {
@@ -42,37 +75,36 @@ class TBA_Optimize_Updater {
         $this->basename = plugin_basename($this->file);
         $this->active   = is_plugin_active($this->basename);
         if (defined('TBA_OPTIMIZE_VERSION')) {
-            $this->version    = TBA_OPTIMIZE_VERSION;
+            $this->version = TBA_OPTIMIZE_VERSION;
+            $this->log("TBA_OPTIMIZE_VERSION set: " . TBA_OPTIMIZE_VERSION);
         } else {
             // Fallback if version is not found
-            $this->version    = '1.0.0';
+            $this->version = '1.0.0';
+            $this->log("Version fallback to 1.0.0");
         }
     }
 
     private function get_repository_info() {
         if (is_null($this->github_api_result)) {
-            // Erstelle die API-URL für das Repository
+            // Create the API URL for the repository
             $url = "{$this->config['api_base']}{$this->config['username']}/{$this->config['repository']}/releases/latest";
             $response = wp_remote_get($url);
 
-            // Debug: Überprüfen, ob die API-Abfrage funktioniert
+            // Log the API request and response
             if (is_wp_error($response)) {
-                $this->log_error('GitHub API Error: ' . $response->get_error_message());
+                $this->log("GitHub API Error: " . $response->get_error_message());
                 return;
             }
 
             if (wp_remote_retrieve_response_code($response) !== 200) {
-                $this->log_error('GitHub API Response Error: ' . wp_remote_retrieve_response_code($response));
+                $this->log("GitHub API Response Error: " . wp_remote_retrieve_response_code($response));
                 return;
             }
 
             $this->github_api_result = wp_remote_retrieve_body($response);
-
             if (!empty($this->github_api_result)) {
                 $this->github_api_result = json_decode($this->github_api_result);
-
-                // Debugging: Log the API result to ensure it's correct
-                $this->log_error('GitHub API Result: ' . print_r($this->github_api_result, true));
+                $this->log("GitHub API Result: " . print_r($this->github_api_result, true));
             }
         }
     }
@@ -84,24 +116,25 @@ class TBA_Optimize_Updater {
 
         $this->get_repository_info();
 
-        $this->log_error('modify_transient called');
+        $this->log("modify_transient called");
 
         if ($this->github_api_result) {
             $remote_version = ltrim($this->github_api_result->tag_name, 'v');
-            $this->log_error('Remote version: ' . $remote_version);
-            $this->log_error('Current version: ' . $this->version);
+            $this->log("Remote version: " . $remote_version);
+            $this->log("Current version: " . $this->version);
 
             if (version_compare($this->version, $remote_version, '<')) {
-                // WordPress-Version und PHP-Version validieren
+                // Validate WordPress and PHP versions
                 if (
                     version_compare(get_bloginfo('version'), $this->config['requires'], '>=') &&
                     version_compare(PHP_VERSION, $this->config['requires_php'], '>=')
                 ) {
+
                     $package = $this->github_api_result->zipball_url;
 
                     $obj = new stdClass();
-                    $obj->slug = $this->config['plugin_slug'];  // Verwende den zentralen Slug
-                    $obj->plugin = $this->config['plugin']; // Pfad zur Haupt-Plugin-Datei
+                    $obj->slug = $this->config['plugin_slug'];  // Use the central slug
+                    $obj->plugin = $this->config['plugin']; // Path to the main plugin file
                     $obj->new_version = $remote_version;
                     $obj->url = $this->config['plugin_url'];
                     $obj->package = $package;
@@ -109,20 +142,29 @@ class TBA_Optimize_Updater {
                     $obj->tested = $this->config['tested'];
                     $obj->requires_php = $this->config['requires_php'];
 
-                    // Setze das Plugin korrekt im Transient
+                    // Check for slug consistency
+                    if ($obj->slug !== $this->config['plugin_slug']) {
+                        $this->log("Plugin slug inconsistency detected! Expected: " . $this->config['plugin_slug'] . " but got: " . $obj->slug);
+                    } else {
+                        $this->log("Plugin slug consistency check passed.");
+                    }
+
+                    // Correctly set the plugin in the transient
                     $transient->response[$obj->plugin] = $obj;
 
-                    $this->log_error('Update detected: ' . print_r($obj, true));
-
+                    $this->log("Update detected: " . print_r($obj, true));
                 } else {
-                    $this->log_error('Version requirements not met.');
+                    $this->log('Version requirements not met.');
                 }
             } else {
-                $this->log_error('No update needed.');
+                $this->log('No update needed.');
             }
         } else {
-            $this->log_error('GitHub API result is empty.');
+            $this->log('GitHub API result is empty.');
         }
+
+        // Log the contents of the transient to check if the update is registered
+        $this->log("Transient contents after modify_transient: \n" . print_r($transient, true));
 
         return $transient;
     }
@@ -132,20 +174,21 @@ class TBA_Optimize_Updater {
             $this->get_repository_info();
             if ($this->github_api_result) {
                 $result = new stdClass();
-                $result->name           = $this->plugin['Name'];
-                $result->slug           = $this->config['plugin_slug'];
-                $result->version        = ltrim($this->github_api_result->tag_name, 'v');
-                $result->author         = $this->plugin['AuthorName'];
-                $result->homepage       = $this->config['plugin_url'];  // URL zentral aus der Konfiguration
-                $result->requires       = $this->config['requires']; // Mindestanforderung an WordPress-Version
-                $result->tested         = $this->config['tested'];     // Getestet bis WordPress-Version
-                $result->requires_php   = $this->config['requires_php']; // Mindestanforderung an PHP-Version
-                $result->download_link  = $this->github_api_result->zipball_url;
-                $result->sections       = array(
+                $result->name = $this->plugin['Name'];
+                $result->slug = $this->config['plugin_slug'];
+                $result->version = ltrim($this->github_api_result->tag_name, 'v');
+                $result->author = $this->plugin['AuthorName'];
+                $result->homepage = $this->config['plugin_url'];
+                $result->requires = $this->config['requires'];
+                $result->tested = $this->config['tested'];
+                $result->requires_php = $this->config['requires_php'];
+                $result->download_link = $this->github_api_result->zipball_url;
+                $result->sections = array(
                     'description' => $this->plugin['Description'],
                     'changelog'   => $this->github_api_result->body
                 );
 
+                $this->log("Plugin popup result: " . print_r($result, true));
                 return $result;
             }
         }
@@ -164,38 +207,14 @@ class TBA_Optimize_Updater {
             activate_plugin($this->basename);
         }
 
+        $this->log("After install completed. Plugin activated.");
+
         return $result;
     }
-
-    // --- Logging function for errors ---
-    private function log_error($message) {
-        if (self::TEST === 1) {
-            $log_file = plugin_dir_path(__FILE__) . 'error_log_tba_optimize.txt';
-
-            // Max log file size in bytes (2 MB)
-            $max_file_size = 2 * 1024 * 1024; // 2 MB
-
-            // Check if the file exists and its size
-            if (file_exists($log_file) && filesize($log_file) > $max_file_size) {
-                // If file size exceeds 2 MB, truncate the file (empty the content)
-                file_put_contents($log_file, ""); // Clear the file
-            }
-
-            // Add divider line and log message
-            $log_entry = "\n==========\n" . date('Y-m-d H:i:s') . ": " . $message . "\n";
-
-            // Append the log entry to the file
-            file_put_contents($log_file, $log_entry, FILE_APPEND | LOCK_EX);
-        }
-    }
-
-} // Schließe die Klasse korrekt
+}
 
 if (is_admin()) {
-
-    // Nur zu Testzwecken: Transient löschen, um Updates zu erzwingen
-    delete_site_transient('update_plugins');
-
-    new TBA_Optimize_Updater(__FILE__);
-
+    add_action('init', function() {
+        new TBA_Optimize_Updater(__FILE__);
+    }, 5);  // Run early
 }
