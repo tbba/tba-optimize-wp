@@ -14,6 +14,7 @@ if (!defined('ABSPATH')) {
  * Text Domain: tba-optimize-wp
  */
 
+
 // Define the version from the plugin header
 function tba_optimize_define_version() {
     if (!defined('TBA_OPTIMIZE_VERSION')) {
