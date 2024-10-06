@@ -26,38 +26,26 @@ class TBA_Optimize_Updater {
         'requires_php' => '7.0', // Mindestanforderung für PHP-Version
     ];
 
-    // Logging file location
-    private $log_file;
+    // Enable debugging and logging (1 for ON, 0 for OFF)
+    const TEST = 1;
 
     public function __construct($file) {
         $this->file = $file;
-        $this->log_file = plugin_dir_path(__FILE__) . 'tba-optimize-errors.log'; // Path to the log file
-
         add_action('admin_init', array($this, 'set_plugin_properties'));
         add_filter('pre_set_site_transient_update_plugins', array($this, 'modify_transient'), 10, 1);
         add_filter('plugins_api', array($this, 'plugin_popup'), 10, 3);
         add_filter('upgrader_post_install', array($this, 'after_install'), 10, 3);
     }
 
-    public function log($message) {
-        if (defined('TEST') && TEST === 1) {
-            // Log to the specific file in the plugin directory
-            error_log($message . "\n", 3, $this->log_file);
-        }
-    }
-
     public function set_plugin_properties() {
         $this->plugin   = get_plugin_data($this->file);
         $this->basename = plugin_basename($this->file);
         $this->active   = is_plugin_active($this->basename);
-
         if (defined('TBA_OPTIMIZE_VERSION')) {
-            $this->version = TBA_OPTIMIZE_VERSION;
-            $this->log('TBA_OPTIMIZE_VERSION defined: ' . $this->version);
+            $this->version    = TBA_OPTIMIZE_VERSION;
         } else {
             // Fallback if version is not found
-            $this->version = '1.0.0';
-            $this->log('Error: TBA_OPTIMIZE_VERSION not defined, falling back to version 1.0.0');
+            $this->version    = '1.0.0';
         }
     }
 
@@ -69,12 +57,12 @@ class TBA_Optimize_Updater {
 
             // Debug: Überprüfen, ob die API-Abfrage funktioniert
             if (is_wp_error($response)) {
-                $this->log('GitHub API Error: ' . $response->get_error_message());
+                $this->log_error('GitHub API Error: ' . $response->get_error_message());
                 return;
             }
 
             if (wp_remote_retrieve_response_code($response) !== 200) {
-                $this->log('GitHub API Response Error: ' . wp_remote_retrieve_response_code($response));
+                $this->log_error('GitHub API Response Error: ' . wp_remote_retrieve_response_code($response));
                 return;
             }
 
@@ -82,7 +70,9 @@ class TBA_Optimize_Updater {
 
             if (!empty($this->github_api_result)) {
                 $this->github_api_result = json_decode($this->github_api_result);
-                $this->log('GitHub API Result: ' . print_r($this->github_api_result, true));
+
+                // Debugging: Log the API result to ensure it's correct
+                $this->log_error('GitHub API Result: ' . print_r($this->github_api_result, true));
             }
         }
     }
@@ -93,12 +83,13 @@ class TBA_Optimize_Updater {
         }
 
         $this->get_repository_info();
-        $this->log('modify_transient called');
+
+        $this->log_error('modify_transient called');
 
         if ($this->github_api_result) {
             $remote_version = ltrim($this->github_api_result->tag_name, 'v');
-            $this->log('Remote version: ' . $remote_version);
-            $this->log('Current version: ' . $this->version);
+            $this->log_error('Remote version: ' . $remote_version);
+            $this->log_error('Current version: ' . $this->version);
 
             if (version_compare($this->version, $remote_version, '<')) {
                 // WordPress-Version und PHP-Version validieren
@@ -121,15 +112,16 @@ class TBA_Optimize_Updater {
                     // Setze das Plugin korrekt im Transient
                     $transient->response[$obj->plugin] = $obj;
 
-                    $this->log('Update detected: ' . print_r($obj, true));
+                    $this->log_error('Update detected: ' . print_r($obj, true));
+
                 } else {
-                    $this->log('Version requirements not met.');
+                    $this->log_error('Version requirements not met.');
                 }
             } else {
-                $this->log('No update needed.');
+                $this->log_error('No update needed.');
             }
         } else {
-            $this->log('GitHub API result is empty.');
+            $this->log_error('GitHub API result is empty.');
         }
 
         return $transient;
@@ -174,10 +166,36 @@ class TBA_Optimize_Updater {
 
         return $result;
     }
+
+    // --- Logging function for errors ---
+    private function log_error($message) {
+        if (self::TEST === 1) {
+            $log_file = plugin_dir_path(__FILE__) . 'error_log_tba_optimize.txt';
+
+            // Max log file size in bytes (2 MB)
+            $max_file_size = 2 * 1024 * 1024; // 2 MB
+
+            // Check if the file exists and its size
+            if (file_exists($log_file) && filesize($log_file) > $max_file_size) {
+                // If file size exceeds 2 MB, truncate the file (empty the content)
+                file_put_contents($log_file, ""); // Clear the file
+            }
+
+            // Add divider line and log message
+            $log_entry = "\n==========\n" . date('Y-m-d H:i:s') . ": " . $message . "\n";
+
+            // Append the log entry to the file
+            file_put_contents($log_file, $log_entry, FILE_APPEND | LOCK_EX);
+        }
+    }
+
 } // Schließe die Klasse korrekt
 
 if (is_admin()) {
+
     // Nur zu Testzwecken: Transient löschen, um Updates zu erzwingen
     delete_site_transient('update_plugins');
+
     new TBA_Optimize_Updater(__FILE__);
+
 }

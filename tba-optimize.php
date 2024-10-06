@@ -3,8 +3,6 @@ if (!defined('ABSPATH')) {
     exit; // Exit if accessed directly.
 }
 
-define('TEST', 1); // Enable debugging and logging (1 for ON, 0 for OFF)
-
 /**
  * Plugin Name: 1 TBA Optimization for Speed and GDPR
  * Plugin URI: https://github.com/tbba/tba-optimize-wp
