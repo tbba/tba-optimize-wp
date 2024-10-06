@@ -3,6 +3,7 @@ if (!defined('ABSPATH')) {
     exit; // Exit if accessed directly.
 }
 
+// The Updater class for TBA Optimize Plugin
 class TBA_Optimize_Updater {
     private $file;
     private $plugin;
@@ -11,7 +12,7 @@ class TBA_Optimize_Updater {
     private $version;
     private $github_api_result;
 
-    // Central Configuration
+    // Configuration for the GitHub repository
     private $config = [
         'username'     => 'tbba',
         'repository'   => 'tba-optimize-wp',
@@ -27,10 +28,18 @@ class TBA_Optimize_Updater {
     public function __construct($file) {
         $this->file = $file;
 
+        // Set plugin properties and hooks
         add_action('admin_init', [$this, 'set_plugin_properties']);
         add_filter('pre_set_site_transient_update_plugins', [$this, 'modify_transient'], 10, 1);
         add_filter('plugins_api', [$this, 'plugin_popup'], 10, 3);
         add_filter('upgrader_post_install', [$this, 'after_install'], 10, 3);
+    }
+
+    // Log function to write messages (uses main log file from the main plugin file)
+    private function log($message) {
+        if (function_exists('tba_optimize_log')) {
+            tba_optimize_log($message);
+        }
     }
 
     public function set_plugin_properties() {
@@ -39,10 +48,10 @@ class TBA_Optimize_Updater {
         $this->active   = is_plugin_active($this->basename);
         if (defined('TBA_OPTIMIZE_VERSION')) {
             $this->version = TBA_OPTIMIZE_VERSION;
-            tba_optimize_log("TBA_OPTIMIZE_VERSION set: " . TBA_OPTIMIZE_VERSION);
+            $this->log("TBA_OPTIMIZE_VERSION set in updater: " . TBA_OPTIMIZE_VERSION);
         } else {
             $this->version = '1.0.0';
-            tba_optimize_log("Version fallback to 1.0.0");
+            $this->log("Version fallback to 1.0.0 in updater.");
         }
     }
 
@@ -52,32 +61,36 @@ class TBA_Optimize_Updater {
             $response = wp_remote_get($url);
 
             if (is_wp_error($response)) {
-                tba_optimize_log("GitHub API Error: " . $response->get_error_message());
+                $this->log("GitHub API Error: " . $response->get_error_message());
                 return;
             }
 
             if (wp_remote_retrieve_response_code($response) !== 200) {
-                tba_optimize_log("GitHub API Response Error: " . wp_remote_retrieve_response_code($response));
+                $this->log("GitHub API Response Error: " . wp_remote_retrieve_response_code($response));
                 return;
             }
 
             $this->github_api_result = wp_remote_retrieve_body($response);
             if (!empty($this->github_api_result)) {
                 $this->github_api_result = json_decode($this->github_api_result);
-                tba_optimize_log("GitHub API Result: " . print_r($this->github_api_result, true));
+                $this->log("GitHub API Result: " . print_r($this->github_api_result, true));
             }
         }
     }
 
     public function modify_transient($transient) {
+        if (!is_object($transient)) {
+            $transient = new stdClass();
+        }
+
         $this->get_repository_info();
 
-        tba_optimize_log("modify_transient called");
+        $this->log("modify_transient called");
 
         if ($this->github_api_result) {
             $remote_version = ltrim($this->github_api_result->tag_name, 'v');
-            tba_optimize_log("Remote version: " . $remote_version);
-            tba_optimize_log("Current version: " . $this->version);
+            $this->log("Remote version: " . $remote_version);
+            $this->log("Current version: " . $this->version);
 
             if (version_compare($this->version, $remote_version, '<')) {
                 if (
@@ -96,22 +109,22 @@ class TBA_Optimize_Updater {
                     $obj->tested = $this->config['tested'];
                     $obj->requires_php = $this->config['requires_php'];
 
-                    // Only modify your plugin's entry in the transient response
                     if (!isset($transient->response[$this->config['plugin']])) {
                         $transient->response[$this->config['plugin']] = $obj;
                     }
 
-                    tba_optimize_log("Update detected: " . print_r($obj, true));
+                    $this->log("Update detected: " . print_r($obj, true));
                 } else {
-                    tba_optimize_log('Version requirements not met.');
+                    $this->log('Version requirements not met.');
                 }
             } else {
-                tba_optimize_log('No update needed.');
+                $this->log('No update needed.');
             }
         } else {
-            tba_optimize_log('GitHub API result is empty.');
+            $this->log('GitHub API result is empty.');
         }
 
+        $this->log("Transient contents after modify_transient: \n" . print_r($transient, true));
         return $transient;
     }
 
@@ -134,7 +147,7 @@ class TBA_Optimize_Updater {
                     'changelog'   => $this->github_api_result->body
                 );
 
-                tba_optimize_log("Plugin popup result: " . print_r($result, true));
+                $this->log("Plugin popup result: " . print_r($result, true));
                 return $result;
             }
         }
@@ -153,12 +166,14 @@ class TBA_Optimize_Updater {
             activate_plugin($this->basename);
         }
 
-        tba_optimize_log("After install completed. Plugin activated.");
+        $this->log("After install completed. Plugin activated.");
 
         return $result;
     }
 }
 
 if (is_admin()) {
-    new TBA_Optimize_Updater(__FILE__);
+    add_action('plugins_loaded', function() {
+        new TBA_Optimize_Updater(__FILE__);
+    }, 15);
 }
