@@ -15,15 +15,6 @@ if (!defined('ABSPATH')) {
  */
 
 
-// Define the version from the plugin header
-function tba_optimize_define_version() {
-    if (!defined('TBA_OPTIMIZE_VERSION')) {
-        $plugin_data = get_file_data(__FILE__, ['Version' => 'Version']);
-        define('TBA_OPTIMIZE_VERSION', $plugin_data['Version']);
-    }
-}
-add_action('plugins_loaded', 'tba_optimize_define_version');
-
 // Manually include the necessary WP-Updater files
 require_once plugin_dir_path(__FILE__) . 'vendor/wp-updater/src/Boot.php';
 require_once plugin_dir_path(__FILE__) . 'vendor/wp-updater/src/Updater.php';
